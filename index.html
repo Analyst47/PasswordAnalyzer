@@ -4,159 +4,272 @@
 <meta charset="UTF-8">
 <title>CyberSec Password Analyzer</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
 
-  body {
-    margin: 0;
-    font-family: 'Orbitron', monospace;
-    background: #0a0f18;
-    color: #00ffea;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
-  }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  header {
-    font-size: 2em;
-    margin: 20px;
-    text-shadow: 0 0 10px #00ffea, 0 0 20px #00bcd4;
-    letter-spacing: 2px;
-  }
+body {
+  font-family: 'Orbitron', monospace;
+  background: #0a0f18;
+  color: #00ffea;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden;
+}
 
-  #container {
-    background: rgba(0,0,0,0.7);
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 0 20px #00ffea33;
-    width: 90%;
-    max-width: 500px;
-    text-align: center;
-  }
+/* Animated background grid */
+#bgCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+}
 
-  input[type="password"] {
-    width: 90%;
-    padding: 10px;
-    font-size: 1em;
-    margin: 15px 0;
-    border-radius: 8px;
-    border: 1px solid #00ffea;
-    background: #001622;
-    color: #00ffea;
-  }
+/* Container card */
+#container {
+  background: rgba(0,0,0,0.8);
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 0 30px #00ffea66, 0 0 60px #00bcd4aa;
+  width: 90%;
+  max-width: 550px;
+  text-align: center;
+  position: relative;
+}
 
-  button {
-    padding: 10px 20px;
-    font-size: 1em;
-    border-radius: 8px;
-    border: none;
-    background: #00ffea;
-    color: #000;
-    cursor: pointer;
-    margin-bottom: 15px;
-  }
+/* Header */
+header {
+  font-size: 2.5em;
+  text-shadow: 0 0 10px #00ffea, 0 0 20px #00bcd4;
+  letter-spacing: 2px;
+  margin-bottom: 30px;
+}
 
-  button:hover {
-    background: #00bcd4;
-  }
+/* Input */
+input[type="password"] {
+  width: 90%;
+  padding: 15px;
+  font-size: 1em;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  border: 2px solid #00ffea;
+  background: #001622;
+  color: #00ffea;
+  text-align: center;
+}
 
-  #strength {
-    font-weight: bold;
-    margin: 10px 0;
-    text-shadow: 0 0 5px #00ffea;
-  }
+/* Buttons */
+button {
+  padding: 12px 25px;
+  font-size: 1em;
+  margin: 10px;
+  border-radius: 10px;
+  border: none;
+  background: #00ffea;
+  color: #000;
+  cursor: pointer;
+  transition: 0.3s;
+}
+button:hover {
+  background: #00bcd4;
+  transform: scale(1.05);
+}
 
-  #breach {
-    margin-top: 15px;
-    font-size: 0.9em;
-  }
+/* Strength Meter */
+.meter {
+  height: 20px;
+  width: 90%;
+  background: #001622;
+  border-radius: 10px;
+  margin: 10px auto;
+  overflow: hidden;
+  box-shadow: 0 0 10px #00ffea66 inset;
+}
+.meter-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg,#ff0033,#ffcc00,#33ff33,#00ffff);
+  transition: width 0.5s ease;
+  box-shadow: 0 0 15px #00ffea;
+}
 
-  .meter {
-    height: 15px;
-    width: 90%;
-    background: #001622;
-    border-radius: 8px;
-    margin: 10px auto;
-    overflow: hidden;
-  }
+/* Text indicators */
+#strength, #entropy, #breach {
+  margin: 10px 0;
+  font-weight: bold;
+  text-shadow: 0 0 5px #00ffea;
+}
 
-  .meter-fill {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg,#ff0033,#ffcc00,#33ff33,#00ffff);
-    transition: width 0.5s ease;
-  }
+/* Particle animation */
+.particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: #00ffea;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+/* Glow animation for breaches */
+.glow-alert {
+  animation: glow 1s infinite alternate;
+}
+@keyframes glow {
+  0% { text-shadow: 0 0 5px #ff0033; }
+  50% { text-shadow: 0 0 15px #ff3300; }
+  100% { text-shadow: 0 0 25px #ff6600; }
+}
+
 </style>
 </head>
 <body>
-<header>CyberSec Password Analyzer</header>
+
+<canvas id="bgCanvas"></canvas>
+
 <div id="container">
+  <header>CyberSec Password Analyzer</header>
+
   <input type="password" id="password" placeholder="Enter password">
+  
   <div class="meter"><div class="meter-fill" id="meter"></div></div>
   <div id="strength">Strength: </div>
+  <div id="entropy">Entropy: </div>
+  
   <button id="checkBreach">Check Breach</button>
+  <button id="generate">Generate Strong Password</button>
+  
   <div id="breach"></div>
 </div>
 
 <script>
+// -------------------- Animated Background Grid --------------------
+const canvas = document.getElementById('bgCanvas');
+const ctx = canvas.getContext('2d');
+let w = canvas.width = window.innerWidth;
+let h = canvas.height = window.innerHeight;
+let lines = [];
+const numLines = 40;
+
+for(let i=0;i<numLines;i++){
+  lines.push({
+    x: Math.random()*w,
+    y: Math.random()*h,
+    length: Math.random()*200+50,
+    speed: Math.random()*0.5+0.2
+  });
+}
+
+function drawLines(){
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle = '#00ffea22';
+  ctx.lineWidth = 1;
+  lines.forEach(l=>{
+    ctx.beginPath();
+    ctx.moveTo(l.x,l.y);
+    ctx.lineTo(l.x,l.y+l.length);
+    ctx.stroke();
+    l.y -= l.speed;
+    if(l.y+l.length < 0) l.y = h;
+  });
+  requestAnimationFrame(drawLines);
+}
+drawLines();
+window.addEventListener('resize',()=>{ w=canvas.width=window.innerWidth; h=canvas.height=window.innerHeight; });
+
+// -------------------- Particle Effect --------------------
+const container = document.getElementById('container');
+let particles = [];
+for(let i=0;i<50;i++){
+  let p = document.createElement('div');
+  p.className = 'particle';
+  p.style.left = Math.random()*w+'px';
+  p.style.top = Math.random()*h+'px';
+  container.appendChild(p);
+  particles.push(p);
+}
+setInterval(()=>{
+  particles.forEach(p=>{
+    let top = parseFloat(p.style.top);
+    top -= 1+Math.random();
+    if(top<0) top=h;
+    p.style.top = top+'px';
+  });
+},30);
+
+// -------------------- Password Analyzer --------------------
 const passwordInput = document.getElementById('password');
 const meter = document.getElementById('meter');
 const strengthText = document.getElementById('strength');
+const entropyText = document.getElementById('entropy');
 const breachBtn = document.getElementById('checkBreach');
 const breachDiv = document.getElementById('breach');
+const generateBtn = document.getElementById('generate');
 
-function evaluatePassword(pw) {
+function evaluatePassword(pw){
   let score = 0;
-  if (!pw) return score;
-
-  if (pw.length >= 8) score += 2;
-  if (pw.length >= 12) score += 2;
-  if (/[A-Z]/.test(pw)) score += 1;
-  if (/[a-z]/.test(pw)) score += 1;
-  if (/[0-9]/.test(pw)) score += 1;
-  if (/[^A-Za-z0-9]/.test(pw)) score += 2;
-
-  return score;
+  let charset = 0;
+  if(/[a-z]/.test(pw)) {score+=1; charset+=26;}
+  if(/[A-Z]/.test(pw)) {score+=1; charset+=26;}
+  if(/[0-9]/.test(pw)) {score+=1; charset+=10;}
+  if(/[^A-Za-z0-9]/.test(pw)) {score+=2; charset+=32;}
+  if(pw.length>=8) score+=2;
+  if(pw.length>=12) score+=2;
+  const entropy = Math.log2(Math.pow(charset,pw.length)).toFixed(1);
+  return {score, entropy};
 }
 
-function getStrengthLabel(score) {
-  if (score <= 2) return 'Weak';
-  if (score <= 4) return 'Medium';
-  if (score <= 6) return 'Strong';
+function getStrengthLabel(score){
+  if(score<=2) return 'Weak';
+  if(score<=4) return 'Medium';
+  if(score<=6) return 'Strong';
   return 'Very Strong';
 }
 
-passwordInput.addEventListener('input', () => {
+passwordInput.addEventListener('input',()=>{
   const pw = passwordInput.value;
-  const score = evaluatePassword(pw);
+  const {score, entropy} = evaluatePassword(pw);
   meter.style.width = (score/8*100)+'%';
   strengthText.textContent = 'Strength: ' + getStrengthLabel(score);
+  entropyText.textContent = 'Entropy: '+entropy+' bits';
 });
 
-breachBtn.addEventListener('click', async () => {
+// -------------------- Breach Check --------------------
+breachBtn.addEventListener('click', async()=>{
   const pw = passwordInput.value;
-  if (!pw) return alert('Enter a password first');
-
+  if(!pw) return alert('Enter a password first');
   const encoder = new TextEncoder();
   const data = encoder.encode(pw);
   const hashBuffer = await crypto.subtle.digest('SHA-1', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2,'0')).join('').toUpperCase();
+  const hashHex = hashArray.map(b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
   const prefix = hashHex.slice(0,5);
   const suffix = hashHex.slice(5);
-
   const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
   const text = await res.text();
   const lines = text.split('\n');
-  const match = lines.find(line => line.split(':')[0] === suffix);
-  if (match) {
+  const match = lines.find(line=>line.split(':')[0]===suffix);
+  if(match){
     const count = match.split(':')[1];
     breachDiv.textContent = `⚠️ Password FOUND in ${count} breaches!`;
-    breachDiv.style.color = '#ff0033';
+    breachDiv.classList.add('glow-alert');
   } else {
     breachDiv.textContent = '✅ Password NOT found in known breaches.';
-    breachDiv.style.color = '#33ff33';
+    breachDiv.classList.remove('glow-alert');
   }
+});
+
+// -------------------- Generate Strong Password --------------------
+generateBtn.addEventListener('click',()=>{
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?";
+  let pw = '';
+  for(let i=0;i<16;i++){
+    pw += chars.charAt(Math.floor(Math.random()*chars.length));
+  }
+  passwordInput.value = pw;
+  passwordInput.dispatchEvent(new Event('input'));
+  breachDiv.textContent = '';
 });
 </script>
 </body>
