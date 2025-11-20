@@ -19,20 +19,12 @@ body {
   overflow: hidden;
 }
 
-/* Background canvas */
-#bgCanvas {
+/* Background layers */
+#bgCanvas, #waveCanvas1, #waveCanvas2 {
   position: fixed;
   top: 0;
   left: 0;
   z-index: -2;
-}
-
-/* Cyber wave behind card */
-#waveCanvas {
-  position: fixed;
-  top:0;
-  left:0;
-  z-index:-1;
 }
 
 /* Container card */
@@ -124,16 +116,6 @@ button:hover {
   margin-top: 10px;
 }
 
-/* Particle effect */
-.particle {
-  position: absolute;
-  width: 3px;
-  height: 3px;
-  background: #00ffea;
-  border-radius: 50%;
-  opacity: 0.8;
-}
-
 /* Glow alert */
 .glow-alert {
   animation: glow 1s infinite alternate;
@@ -144,26 +126,26 @@ button:hover {
   100% { text-shadow: 0 0 25px #ff6600; }
 }
 
-/* Proof mode panel */
-#proofPanel {
+/* Breach panel */
+#breachPanel {
   background: #001622cc;
   border: 2px solid #00ffea;
   border-radius: 10px;
   padding: 15px;
   margin-top: 15px;
-  text-align: left;
-  max-height: 250px;
-  overflow-y: auto;
-  font-size: 0.85em;
+  font-size: 0.95em;
+  color: #00ffea;
+  text-align: center;
   display: none;
 }
-#proofPanel h4 { margin-bottom: 5px; color: #ffcc00; }
+#breachPanel a { color: #ffcc00; text-decoration: underline; }
 </style>
 </head>
 <body>
 
 <canvas id="bgCanvas"></canvas>
-<canvas id="waveCanvas"></canvas>
+<canvas id="waveCanvas1"></canvas>
+<canvas id="waveCanvas2"></canvas>
 
 <div id="container">
   <header>Fahim's Password Analyzer</header>
@@ -185,16 +167,13 @@ button:hover {
     <button id="toggleGenerated">Hide</button>
   </div>
   
-  <div id="breach"></div>
-  
-  <div id="proofPanel">
-    <h4>Proof Mode C: Breach Verification</h4>
-    <div id="hashPrefix"></div>
-    <div id="hashSuffix"></div>
-    <div id="apiEndpoint"></div>
-    <div id="apiResponse"></div>
-    <div id="kAnonExplanation"></div>
+  <div id="breachPanel">
+    Password check verified via <strong>Have I Been Pwned API</strong>.<br>
+    Trusted by Microsoft, 1Password, Cloudflare.<br>
+    <a href="https://haveibeenpwned.com/Passwords" target="_blank">Learn more</a>
   </div>
+  
+  <div id="breach"></div>
 </div>
 
 <script>
@@ -225,26 +204,32 @@ function drawLines(){
 drawLines();
 window.addEventListener('resize',()=>{w=canvas.width=window.innerWidth; h=canvas.height=window.innerHeight;});
 
-// -------------------- Cyber Wave --------------------
-const waveCanvas=document.getElementById('waveCanvas');
-const waveCtx=waveCanvas.getContext('2d');
-waveCanvas.width=w; waveCanvas.height=h;
-let waveOffset=0;
-function drawWave(){
-  waveCtx.clearRect(0,0,w,h);
-  waveCtx.strokeStyle='rgba(0,255,234,0.15)';
-  waveCtx.lineWidth=2;
-  waveCtx.beginPath();
+// -------------------- Layered Subtle Waves --------------------
+const wave1=document.getElementById('waveCanvas1').getContext('2d');
+const wave2=document.getElementById('waveCanvas2').getContext('2d');
+wave1.canvas.width=w; wave1.canvas.height=h;
+wave2.canvas.width=w; wave2.canvas.height=h;
+let offset1=0, offset2=0;
+function drawWaves(){
+  wave1.clearRect(0,0,w,h);
+  wave2.clearRect(0,0,w,h);
+  wave1.strokeStyle='rgba(0,255,234,0.05)';
+  wave1.lineWidth=2;
+  wave2.strokeStyle='rgba(0,255,234,0.08)';
+  wave2.lineWidth=1.5;
+  wave1.beginPath(); wave2.beginPath();
   for(let x=0;x<w;x++){
-    let y=h/2+Math.sin((x+waveOffset)/50)*30;
-    if(x===0) waveCtx.moveTo(x,y); else waveCtx.lineTo(x,y);
+    let y1=h/2+Math.sin((x+offset1)/80)*40;
+    let y2=h/2+Math.sin((x+offset2)/100+100)*30;
+    if(x===0){ wave1.moveTo(x,y1); wave2.moveTo(x,y2);}
+    else{ wave1.lineTo(x,y1); wave2.lineTo(x,y2);}
   }
-  waveCtx.stroke();
-  waveOffset+=2;
-  requestAnimationFrame(drawWave);
+  wave1.stroke(); wave2.stroke();
+  offset1+=0.5; offset2+=0.7;
+  requestAnimationFrame(drawWaves);
 }
-drawWave();
-window.addEventListener('resize',()=>{waveCanvas.width=w; waveCanvas.height=h;});
+drawWaves();
+window.addEventListener('resize',()=>{wave1.canvas.width=w; wave1.canvas.height=h; wave2.canvas.width=w; wave2.canvas.height=h;});
 
 // -------------------- Particles --------------------
 const container=document.getElementById('container');
@@ -274,12 +259,7 @@ const entropyText=document.getElementById('entropy');
 const complexityText=document.getElementById('complexity');
 const breachBtn=document.getElementById('checkBreach');
 const breachDiv=document.getElementById('breach');
-const proofPanel=document.getElementById('proofPanel');
-const hashPrefixDiv=document.getElementById('hashPrefix');
-const hashSuffixDiv=document.getElementById('hashSuffix');
-const apiEndpointDiv=document.getElementById('apiEndpoint');
-const apiResponseDiv=document.getElementById('apiResponse');
-const kAnonExplanationDiv=document.getElementById('kAnonExplanation');
+const breachPanel=document.getElementById('breachPanel');
 
 function evaluatePassword(pw){
   let score=0, charset=0;
@@ -308,7 +288,7 @@ passwordInput.addEventListener('input',()=>{
   entropyText.textContent='Entropy: '+entropy+' bits';
   complexityText.textContent='Complexity: '+complexity;
   breachDiv.textContent='';
-  proofPanel.style.display='none';
+  breachPanel.style.display='none';
 });
 
 // -------------------- Breach Check --------------------
@@ -334,13 +314,7 @@ breachBtn.addEventListener('click',async()=>{
     breachDiv.textContent='✅ Password NOT found in known breaches.';
     breachDiv.classList.remove('glow-alert');
   }
-  // Proof Mode C display
-  proofPanel.style.display='block';
-  hashPrefixDiv.textContent='SHA-1 Prefix Sent: '+prefix;
-  hashSuffixDiv.textContent='SHA-1 Suffix (local match): '+suffix;
-  apiEndpointDiv.textContent='API Endpoint Called: https://api.pwnedpasswords.com/range/'+prefix;
-  apiResponseDiv.textContent='Partial API Response (first 10 lines):\n'+lines.slice(0,10).join('\n');
-  kAnonExplanationDiv.textContent='k-Anonymity ensures your password is never fully sent. Trusted by Microsoft, 1Password, Cloudflare.';
+  breachPanel.style.display='block';
 });
 
 // -------------------- Generate Strong Password --------------------
