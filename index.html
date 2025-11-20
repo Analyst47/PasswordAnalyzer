@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CyberSec Password Analyzer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+  body {
+    margin: 0;
+    font-family: 'Orbitron', monospace;
+    background: #0a0f18;
+    color: #00ffea;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  header {
+    font-size: 2em;
+    margin: 20px;
+    text-shadow: 0 0 10px #00ffea, 0 0 20px #00bcd4;
+    letter-spacing: 2px;
+  }
+
+  #container {
+    background: rgba(0,0,0,0.7);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 0 20px #00ffea33;
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+  }
+
+  input[type="password"] {
+    width: 90%;
+    padding: 10px;
+    font-size: 1em;
+    margin: 15px 0;
+    border-radius: 8px;
+    border: 1px solid #00ffea;
+    background: #001622;
+    color: #00ffea;
+  }
+
+  button {
+    padding: 10px 20px;
+    font-size: 1em;
+    border-radius: 8px;
+    border: none;
+    background: #00ffea;
+    color: #000;
+    cursor: pointer;
+    margin-bottom: 15px;
+  }
+
+  button:hover {
+    background: #00bcd4;
+  }
+
+  #strength {
+    font-weight: bold;
+    margin: 10px 0;
+    text-shadow: 0 0 5px #00ffea;
+  }
+
+  #breach {
+    margin-top: 15px;
+    font-size: 0.9em;
+  }
+
+  .meter {
+    height: 15px;
+    width: 90%;
+    background: #001622;
+    border-radius: 8px;
+    margin: 10px auto;
+    overflow: hidden;
+  }
+
+  .meter-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg,#ff0033,#ffcc00,#33ff33,#00ffff);
+    transition: width 0.5s ease;
+  }
+</style>
+</head>
+<body>
+<header>CyberSec Password Analyzer</header>
+<div id="container">
+  <input type="password" id="password" placeholder="Enter password">
+  <div class="meter"><div class="meter-fill" id="meter"></div></div>
+  <div id="strength">Strength: </div>
+  <button id="checkBreach">Check Breach</button>
+  <div id="breach"></div>
+</div>
+
+<script>
+const passwordInput = document.getElementById('password');
+const meter = document.getElementById('meter');
+const strengthText = document.getElementById('strength');
+const breachBtn = document.getElementById('checkBreach');
+const breachDiv = document.getElementById('breach');
+
+function evaluatePassword(pw) {
+  let score = 0;
+  if (!pw) return score;
+
+  if (pw.length >= 8) score += 2;
+  if (pw.length >= 12) score += 2;
+  if (/[A-Z]/.test(pw)) score += 1;
+  if (/[a-z]/.test(pw)) score += 1;
+  if (/[0-9]/.test(pw)) score += 1;
+  if (/[^A-Za-z0-9]/.test(pw)) score += 2;
+
+  return score;
+}
+
+function getStrengthLabel(score) {
+  if (score <= 2) return 'Weak';
+  if (score <= 4) return 'Medium';
+  if (score <= 6) return 'Strong';
+  return 'Very Strong';
+}
+
+passwordInput.addEventListener('input', () => {
+  const pw = passwordInput.value;
+  const score = evaluatePassword(pw);
+  meter.style.width = (score/8*100)+'%';
+  strengthText.textContent = 'Strength: ' + getStrengthLabel(score);
+});
+
+breachBtn.addEventListener('click', async () => {
+  const pw = passwordInput.value;
+  if (!pw) return alert('Enter a password first');
+
+  const encoder = new TextEncoder();
+  const data = encoder.encode(pw);
+  const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2,'0')).join('').toUpperCase();
+  const prefix = hashHex.slice(0,5);
+  const suffix = hashHex.slice(5);
+
+  const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+  const text = await res.text();
+  const lines = text.split('\n');
+  const match = lines.find(line => line.split(':')[0] === suffix);
+  if (match) {
+    const count = match.split(':')[1];
+    breachDiv.textContent = `⚠️ Password FOUND in ${count} breaches!`;
+    breachDiv.style.color = '#ff0033';
+  } else {
+    breachDiv.textContent = '✅ Password NOT found in known breaches.';
+    breachDiv.style.color = '#33ff33';
+  }
+});
+</script>
+</body>
+</html>
